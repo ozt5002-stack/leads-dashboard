@@ -97,6 +97,13 @@
   .filter-active-Negotiation { background: #d97706; color: #fff; border-color: #d97706; }
   .filter-active-Won { background: #16a34a; color: #fff; border-color: #16a34a; }
   .filter-active-Lost { background: #dc2626; color: #fff; border-color: #dc2626; }
+  .modal-backdrop { background: rgba(2, 6, 23, 0.5); }
+  .modal-card { background: var(--bg-card); }
+  .field-label { color: var(--text-secondary); }
+  .field-input { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
+  .field-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .btn-ghost { color: var(--text-secondary); }
+  .btn-ghost:hover { background: var(--row-hover); }
 </style>
 
 <div id="root"></div>
@@ -123,13 +130,86 @@ function formatCurrency(value) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 }
 
+const EMPTY_LEAD = { name: "", company: "", status: "Lead", value: "", source: "", notes: "" };
+
+function LeadFormModal({ initialLead, onSave, onClose }) {
+  const [form, setForm] = useState(initialLead ?? EMPTY_LEAD);
+  const isEdit = Boolean(initialLead);
+
+  function handleChange(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    onSave({ ...form, value: Number(form.value) || 0 });
+  }
+
+  return (
+    <div className="modal-backdrop fixed inset-0 z-10 flex items-center justify-center p-4" onClick={onClose}>
+      <form onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit} className="modal-card w-full max-w-md rounded-xl p-6 shadow-xl">
+        <h2 className="mb-4 text-lg font-bold text-p">{isEdit ? "עריכת ליד" : "הוספת ליד חדש"}</h2>
+        <div className="space-y-3">
+          <div>
+            <label className="field-label mb-1 block text-xs font-medium">שם</label>
+            <input required type="text" value={form.name} onChange={(e) => handleChange("name", e.target.value)} className="field-input w-full rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="field-label mb-1 block text-xs font-medium">חברה</label>
+            <input required type="text" value={form.company} onChange={(e) => handleChange("company", e.target.value)} className="field-input w-full rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label mb-1 block text-xs font-medium">סטטוס</label>
+              <select value={form.status} onChange={(e) => handleChange("status", e.target.value)} className="field-input w-full rounded-lg px-3 py-2 text-sm">
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="field-label mb-1 block text-xs font-medium">ערך ($)</label>
+              <input required type="number" min="0" value={form.value} onChange={(e) => handleChange("value", e.target.value)} className="field-input w-full rounded-lg px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="field-label mb-1 block text-xs font-medium">מקור</label>
+            <input type="text" value={form.source} onChange={(e) => handleChange("source", e.target.value)} className="field-input w-full rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="field-label mb-1 block text-xs font-medium">הערות</label>
+            <textarea rows={2} value={form.notes} onChange={(e) => handleChange("notes", e.target.value)} className="field-input w-full rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-ghost rounded-lg px-4 py-2 text-sm font-medium">ביטול</button>
+          <button type="submit" className="btn-primary rounded-lg px-4 py-2 text-sm font-medium">שמירה</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function LeadsDashboard() {
   const [leads, setLeads] = useState(INITIAL_LEADS);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatuses, setActiveStatuses] = useState(new Set(STATUSES));
+  const [editingLead, setEditingLead] = useState(null);
+  const [isAdding, setIsAdding] = useState(false);
 
   function handleDelete(id) {
     setLeads((prev) => prev.filter((lead) => lead.id !== id));
+  }
+
+  function handleAddLead(leadData) {
+    const nextId = leads.length > 0 ? Math.max(...leads.map((l) => l.id)) + 1 : 1;
+    setLeads((prev) => [...prev, { ...leadData, id: nextId }]);
+    setIsAdding(false);
+  }
+
+  function handleUpdateLead(leadData) {
+    setLeads((prev) => prev.map((lead) => (lead.id === leadData.id ? leadData : lead)));
+    setEditingLead(null);
   }
 
   function toggleStatus(status) {
@@ -161,7 +241,7 @@ function LeadsDashboard() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-p">ניהול לידים</h1>
-          <button type="button" className="btn-primary rounded-lg px-4 py-2 text-sm font-medium shadow-sm">
+          <button type="button" onClick={() => setIsAdding(true)} className="btn-primary rounded-lg px-4 py-2 text-sm font-medium shadow-sm">
             + הוסף ליד חדש
           </button>
         </div>
@@ -221,7 +301,7 @@ function LeadsDashboard() {
                   <td className="max-w-xs truncate px-4 py-3 text-sm text-m" title={lead.notes}>{lead.notes}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm">
                     <div className="flex gap-2">
-                      <button type="button" className="btn-edit rounded-md px-2 py-1 text-xs font-medium">ערוך</button>
+                      <button type="button" onClick={() => setEditingLead(lead)} className="btn-edit rounded-md px-2 py-1 text-xs font-medium">ערוך</button>
                       <button type="button" onClick={() => handleDelete(lead.id)} className="btn-delete rounded-md px-2 py-1 text-xs font-medium">מחק</button>
                     </div>
                   </td>
@@ -238,6 +318,11 @@ function LeadsDashboard() {
           </table>
         </div>
       </div>
+
+      {isAdding && <LeadFormModal onSave={handleAddLead} onClose={() => setIsAdding(false)} />}
+      {editingLead && (
+        <LeadFormModal initialLead={editingLead} onSave={handleUpdateLead} onClose={() => setEditingLead(null)} />
+      )}
     </div>
   );
 }

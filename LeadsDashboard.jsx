@@ -37,13 +37,138 @@ function formatCurrency(value) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 }
 
+const EMPTY_LEAD = { name: "", company: "", status: "Lead", value: "", source: "", notes: "" };
+
+function LeadFormModal({ initialLead, onSave, onClose }) {
+  const [form, setForm] = useState(initialLead ?? EMPTY_LEAD);
+  const isEdit = Boolean(initialLead);
+
+  function handleChange(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    onSave({ ...form, value: Number(form.value) || 0 });
+  }
+
+  return (
+    <div className="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/40 p-4" onClick={onClose}>
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+      >
+        <h2 className="mb-4 text-lg font-bold text-slate-900">{isEdit ? "עריכת ליד" : "הוספת ליד חדש"}</h2>
+
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">שם</label>
+            <input
+              required
+              type="text"
+              value={form.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">חברה</label>
+            <input
+              required
+              type="text"
+              value={form.company}
+              onChange={(e) => handleChange("company", e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">סטטוס</label>
+              <select
+                value={form.status}
+                onChange={(e) => handleChange("status", e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">ערך ($)</label>
+              <input
+                required
+                type="number"
+                min="0"
+                value={form.value}
+                onChange={(e) => handleChange("value", e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">מקור</label>
+            <input
+              type="text"
+              value={form.source}
+              onChange={(e) => handleChange("source", e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">הערות</label>
+            <textarea
+              rows={2}
+              value={form.notes}
+              onChange={(e) => handleChange("notes", e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            ביטול
+          </button>
+          <button
+            type="submit"
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+          >
+            שמירה
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export default function LeadsDashboard() {
   const [leads, setLeads] = useState(INITIAL_LEADS);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatuses, setActiveStatuses] = useState(new Set(STATUSES));
+  const [editingLead, setEditingLead] = useState(null);
+  const [isAdding, setIsAdding] = useState(false);
 
   function handleDelete(id) {
     setLeads((prev) => prev.filter((lead) => lead.id !== id));
+  }
+
+  function handleAddLead(leadData) {
+    const nextId = leads.length > 0 ? Math.max(...leads.map((l) => l.id)) + 1 : 1;
+    setLeads((prev) => [...prev, { ...leadData, id: nextId }]);
+    setIsAdding(false);
+  }
+
+  function handleUpdateLead(leadData) {
+    setLeads((prev) => prev.map((lead) => (lead.id === leadData.id ? leadData : lead)));
+    setEditingLead(null);
   }
 
   function toggleStatus(status) {
@@ -77,6 +202,7 @@ export default function LeadsDashboard() {
           <h1 className="text-2xl font-bold text-slate-900">ניהול לידים</h1>
           <button
             type="button"
+            onClick={() => setIsAdding(true)}
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
           >
             + הוסף ליד חדש
@@ -144,6 +270,7 @@ export default function LeadsDashboard() {
                     <div className="flex gap-2">
                       <button
                         type="button"
+                        onClick={() => setEditingLead(lead)}
                         className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
                       >
                         ערוך
@@ -170,6 +297,17 @@ export default function LeadsDashboard() {
           </table>
         </div>
       </div>
+
+      {isAdding && (
+        <LeadFormModal onSave={handleAddLead} onClose={() => setIsAdding(false)} />
+      )}
+      {editingLead && (
+        <LeadFormModal
+          initialLead={editingLead}
+          onSave={handleUpdateLead}
+          onClose={() => setEditingLead(null)}
+        />
+      )}
     </div>
   );
 }
