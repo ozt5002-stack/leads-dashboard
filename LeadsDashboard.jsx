@@ -1,7 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 const STATUSES = ["Lead", "Prospect", "Negotiation", "Won", "Lost"];
 const STORAGE_KEY = "leads";
+
+const STATUS_CHART_COLORS = {
+  Lead: "#475569",
+  Prospect: "#2563eb",
+  Negotiation: "#d97706",
+  Won: "#16a34a",
+  Lost: "#dc2626",
+};
 
 const STATUS_STYLES = {
   Lead: "bg-slate-100 text-slate-700 ring-slate-600/20",
@@ -243,6 +263,19 @@ export default function LeadsDashboard() {
     });
   }, [leads, searchQuery, activeStatuses]);
 
+  const statusBreakdown = useMemo(() => {
+    return STATUSES.map((status) => {
+      const matching = filteredLeads.filter((lead) => lead.status === status);
+      return {
+        status,
+        count: matching.length,
+        totalValue: matching.reduce((sum, lead) => sum + lead.value, 0),
+      };
+    });
+  }, [filteredLeads]);
+
+  const pieData = statusBreakdown.filter((entry) => entry.count > 0);
+
   return (
     <div className="min-h-screen bg-slate-50 p-6" dir="rtl">
       <div className="mx-auto max-w-6xl">
@@ -263,6 +296,55 @@ export default function LeadsDashboard() {
             >
               + הוסף ליד חדש
             </button>
+          </div>
+        </div>
+
+        <div className="mb-6 flex flex-col gap-4 md:flex-row">
+          <div className="flex-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="mb-2 text-sm font-semibold text-slate-700">התפלגות לידים לפי סטטוס</h2>
+            {pieData.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="count"
+                      nameKey="status"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      paddingAngle={2}
+                    >
+                      {pieData.map((entry) => (
+                        <Cell key={entry.status} fill={STATUS_CHART_COLORS[entry.status]} stroke="#ffffff" strokeWidth={2} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value, name) => [`${value} לידים`, name]} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center text-sm text-slate-400">אין נתונים להצגה</div>
+            )}
+          </div>
+
+          <div className="flex-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="mb-2 text-sm font-semibold text-slate-700">סכום ערך לפי סטטוס</h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={statusBreakdown} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                  <XAxis dataKey="status" tick={{ fontSize: 12, fill: "#64748b" }} />
+                  <YAxis tick={{ fontSize: 12, fill: "#64748b" }} tickFormatter={(v) => `$${v / 1000}k`} />
+                  <Tooltip formatter={(value) => formatCurrency(value)} />
+                  <Bar dataKey="totalValue" radius={[4, 4, 0, 0]}>
+                    {statusBreakdown.map((entry) => (
+                      <Cell key={entry.status} fill={STATUS_CHART_COLORS[entry.status]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
