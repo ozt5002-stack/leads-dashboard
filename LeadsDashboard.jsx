@@ -16,24 +16,24 @@ const STATUSES = ["Lead", "Prospect", "Negotiation", "Won", "Lost"];
 const STORAGE_KEY = "leads";
 
 const STATUS_CHART_COLORS = {
-  Lead: "#475569",
-  Prospect: "#2563eb",
+  Lead: "#2563eb",
+  Prospect: "#9333ea",
   Negotiation: "#d97706",
   Won: "#16a34a",
   Lost: "#dc2626",
 };
 
 const STATUS_STYLES = {
-  Lead: "bg-slate-100 text-slate-700 ring-slate-600/20",
-  Prospect: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  Lead: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  Prospect: "bg-purple-50 text-purple-700 ring-purple-600/20",
   Negotiation: "bg-amber-50 text-amber-700 ring-amber-600/20",
   Won: "bg-green-50 text-green-700 ring-green-600/20",
   Lost: "bg-red-50 text-red-700 ring-red-600/20",
 };
 
 const STATUS_FILTER_ACTIVE = {
-  Lead: "bg-slate-600 text-white ring-slate-600",
-  Prospect: "bg-blue-600 text-white ring-blue-600",
+  Lead: "bg-blue-600 text-white ring-blue-600",
+  Prospect: "bg-purple-600 text-white ring-purple-600",
   Negotiation: "bg-amber-600 text-white ring-amber-600",
   Won: "bg-green-600 text-white ring-green-600",
   Lost: "bg-red-600 text-white ring-red-600",
@@ -153,13 +153,13 @@ function AddLeadModal({ onSave, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className="min-h-[44px] rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 active:bg-slate-200"
           >
             ביטול
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+            className="min-h-[44px] rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-500 active:bg-indigo-700"
           >
             שמירה
           </button>
@@ -286,22 +286,22 @@ export default function LeadsDashboard() {
   }, [filteredLeads]);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6" dir="rtl">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6" dir="rtl">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-slate-900">ניהול לידים</h1>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={handleExport}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              className="min-h-[44px] rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100"
             >
               Export JSON
             </button>
             <button
               type="button"
               onClick={() => setIsAdding(true)}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
+              className="min-h-[44px] rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 active:bg-indigo-700"
             >
               + הוסף ליד חדש
             </button>
@@ -378,7 +378,7 @@ export default function LeadsDashboard() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="חיפוש לפי שם או חברה..."
-            className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="min-h-[40px] w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
           <div className="flex flex-wrap gap-2">
             {STATUSES.map((status) => {
@@ -388,7 +388,7 @@ export default function LeadsDashboard() {
                   key={status}
                   type="button"
                   onClick={() => toggleStatus(status)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition-colors ${
+                  className={`min-h-[36px] rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 ring-inset transition-colors ${
                     isActive ? STATUS_FILTER_ACTIVE[status] : STATUS_FILTER_INACTIVE
                   }`}
                 >
@@ -400,6 +400,7 @@ export default function LeadsDashboard() {
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-right">
             <thead className="bg-slate-50">
               <tr>
@@ -478,14 +479,14 @@ export default function LeadsDashboard() {
                           <button
                             type="button"
                             onClick={saveEdit}
-                            className="rounded-md px-2 py-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500"
+                            className="min-h-[32px] rounded-md px-2.5 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700"
                           >
                             שמור
                           </button>
                           <button
                             type="button"
                             onClick={cancelEdit}
-                            className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                            className="min-h-[32px] rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 active:bg-slate-200"
                           >
                             ביטול
                           </button>
@@ -516,14 +517,14 @@ export default function LeadsDashboard() {
                         <button
                           type="button"
                           onClick={() => startEdit(lead)}
-                          className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
+                          className="min-h-[32px] rounded-md px-2.5 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100"
                         >
                           ערוך
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(lead.id)}
-                          className="rounded-md px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                          className="min-h-[32px] rounded-md px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 active:bg-red-100"
                         >
                           מחק
                         </button>
@@ -541,6 +542,7 @@ export default function LeadsDashboard() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 

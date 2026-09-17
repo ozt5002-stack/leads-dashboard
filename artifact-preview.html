@@ -1,4 +1,5 @@
 <title>Leads Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
@@ -20,8 +21,8 @@
     --row-hover: #f8fafc;
     --danger: #dc2626;
     --danger-bg-hover: #fef2f2;
-    --status-lead-bg: #f1f5f9; --status-lead-fg: #334155; --status-lead-ring: rgba(51,65,85,0.16);
-    --status-prospect-bg: #eff6ff; --status-prospect-fg: #1d4ed8; --status-prospect-ring: rgba(29,78,216,0.16);
+    --status-lead-bg: #eff6ff; --status-lead-fg: #1d4ed8; --status-lead-ring: rgba(29,78,216,0.16);
+    --status-prospect-bg: #faf5ff; --status-prospect-fg: #7e22ce; --status-prospect-ring: rgba(126,34,206,0.16);
     --status-negotiation-bg: #fffbeb; --status-negotiation-fg: #b45309; --status-negotiation-ring: rgba(180,83,9,0.16);
     --status-won-bg: #f0fdf4; --status-won-fg: #15803d; --status-won-ring: rgba(21,128,61,0.16);
     --status-lost-bg: #fef2f2; --status-lost-fg: #b91c1c; --status-lost-ring: rgba(185,28,28,0.16);
@@ -41,8 +42,8 @@
       --row-hover: #16202f;
       --danger: #f87171;
       --danger-bg-hover: rgba(248,113,113,0.1);
-      --status-lead-bg: #1e293b; --status-lead-fg: #cbd5e1; --status-lead-ring: rgba(203,213,225,0.15);
-      --status-prospect-bg: #1e293b; --status-prospect-fg: #93c5fd; --status-prospect-ring: rgba(147,197,253,0.18);
+      --status-lead-bg: #1e293b; --status-lead-fg: #93c5fd; --status-lead-ring: rgba(147,197,253,0.18);
+      --status-prospect-bg: #241b33; --status-prospect-fg: #d8b4fe; --status-prospect-ring: rgba(216,180,254,0.18);
       --status-negotiation-bg: #2a2210; --status-negotiation-fg: #fbbf24; --status-negotiation-ring: rgba(251,191,36,0.18);
       --status-won-bg: #102015; --status-won-fg: #4ade80; --status-won-ring: rgba(74,222,128,0.18);
       --status-lost-bg: #2a1414; --status-lost-fg: #f87171; --status-lost-ring: rgba(248,113,113,0.18);
@@ -62,8 +63,8 @@
     --row-hover: #16202f;
     --danger: #f87171;
     --danger-bg-hover: rgba(248,113,113,0.1);
-    --status-lead-bg: #1e293b; --status-lead-fg: #cbd5e1; --status-lead-ring: rgba(203,213,225,0.15);
-    --status-prospect-bg: #1e293b; --status-prospect-fg: #93c5fd; --status-prospect-ring: rgba(147,197,253,0.18);
+    --status-lead-bg: #1e293b; --status-lead-fg: #93c5fd; --status-lead-ring: rgba(147,197,253,0.18);
+    --status-prospect-bg: #241b33; --status-prospect-fg: #d8b4fe; --status-prospect-ring: rgba(216,180,254,0.18);
     --status-negotiation-bg: #2a2210; --status-negotiation-fg: #fbbf24; --status-negotiation-ring: rgba(251,191,36,0.18);
     --status-won-bg: #102015; --status-won-fg: #4ade80; --status-won-ring: rgba(74,222,128,0.18);
     --status-lost-bg: #2a1414; --status-lost-fg: #f87171; --status-lost-ring: rgba(248,113,113,0.18);
@@ -94,8 +95,8 @@
   .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .filter-pill { border-width: 1px; border-style: solid; }
   .filter-inactive { background: var(--bg-card); color: var(--text-muted); border-color: var(--border); }
-  .filter-active-Lead { background: #475569; color: #fff; border-color: #475569; }
-  .filter-active-Prospect { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .filter-active-Lead { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .filter-active-Prospect { background: #9333ea; color: #fff; border-color: #9333ea; }
   .filter-active-Negotiation { background: #d97706; color: #fff; border-color: #d97706; }
   .filter-active-Won { background: #16a34a; color: #fff; border-color: #16a34a; }
   .filter-active-Lost { background: #dc2626; color: #fff; border-color: #dc2626; }
@@ -123,8 +124,8 @@ const STATUSES = ["Lead", "Prospect", "Negotiation", "Won", "Lost"];
 const STORAGE_KEY = "leads";
 
 const STATUS_CHART_COLORS = {
-  Lead: "#475569",
-  Prospect: "#2563eb",
+  Lead: "#2563eb",
+  Prospect: "#9333ea",
   Negotiation: "#d97706",
   Won: "#16a34a",
   Lost: "#dc2626",
@@ -198,8 +199,8 @@ function AddLeadModal({ onSave, onClose }) {
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="btn-ghost rounded-lg px-4 py-2 text-sm font-medium">ביטול</button>
-          <button type="submit" className="btn-primary rounded-lg px-4 py-2 text-sm font-medium">שמירה</button>
+          <button type="button" onClick={onClose} className="btn-ghost rounded-lg px-4 py-2.5 text-sm font-medium" style={{minHeight: 44}}>ביטול</button>
+          <button type="submit" className="btn-primary rounded-lg px-4 py-2.5 text-sm font-medium" style={{minHeight: 44}}>שמירה</button>
         </div>
       </form>
     </div>
@@ -321,15 +322,15 @@ function LeadsDashboard() {
   }, [filteredLeads]);
 
   return (
-    <div className="min-h-screen p-6" dir="rtl">
+    <div className="min-h-screen p-4 sm:p-6" dir="rtl">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-p">ניהול לידים</h1>
-          <div className="flex gap-2">
-            <button type="button" onClick={handleExport} className="btn-ghost rounded-lg border px-4 py-2 text-sm font-medium" style={{borderColor:"var(--border)"}}>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={handleExport} className="btn-ghost rounded-lg border px-4 py-2.5 text-sm font-medium" style={{borderColor:"var(--border)", minHeight: 44}}>
               Export JSON
             </button>
-            <button type="button" onClick={() => setIsAdding(true)} className="btn-primary rounded-lg px-4 py-2 text-sm font-medium shadow-sm">
+            <button type="button" onClick={() => setIsAdding(true)} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-medium shadow-sm" style={{minHeight: 44}}>
               + הוסף ליד חדש
             </button>
           </div>
@@ -398,6 +399,7 @@ function LeadsDashboard() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="חיפוש לפי שם או חברה..."
             className="search-input w-full max-w-xs rounded-lg px-3 py-2 text-sm"
+            style={{minHeight: 40}}
           />
           <div className="flex flex-wrap gap-2">
             {STATUSES.map((status) => {
@@ -407,9 +409,10 @@ function LeadsDashboard() {
                   key={status}
                   type="button"
                   onClick={() => toggleStatus(status)}
-                  className={`filter-pill rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`filter-pill rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
                     isActive ? `filter-active-${status}` : "filter-inactive"
                   }`}
+                  style={{minHeight: 36}}
                 >
                   {status}
                 </button>
@@ -419,6 +422,7 @@ function LeadsDashboard() {
         </div>
 
         <div className="surface overflow-hidden rounded-xl border shadow-sm">
+          <div className="overflow-x-auto">
           <table className="min-w-full text-right">
             <thead className="thead-bg">
               <tr>
@@ -462,8 +466,8 @@ function LeadsDashboard() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-2 text-sm">
                         <div className="flex gap-2">
-                          <button type="button" onClick={saveEdit} className="btn-save rounded-md px-2 py-1 text-xs font-medium">שמור</button>
-                          <button type="button" onClick={cancelEdit} className="btn-ghost rounded-md px-2 py-1 text-xs font-medium">ביטול</button>
+                          <button type="button" onClick={saveEdit} className="btn-save rounded-md px-2.5 py-1.5 text-xs font-medium" style={{minHeight: 32}}>שמור</button>
+                          <button type="button" onClick={cancelEdit} className="btn-ghost rounded-md px-2.5 py-1.5 text-xs font-medium" style={{minHeight: 32}}>ביטול</button>
                         </div>
                       </td>
                     </tr>
@@ -484,8 +488,8 @@ function LeadsDashboard() {
                     <td className="max-w-xs truncate px-4 py-3 text-sm text-m" title={lead.notes}>{lead.notes}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => startEdit(lead)} className="btn-edit rounded-md px-2 py-1 text-xs font-medium">ערוך</button>
-                        <button type="button" onClick={() => handleDelete(lead.id)} className="btn-delete rounded-md px-2 py-1 text-xs font-medium">מחק</button>
+                        <button type="button" onClick={() => startEdit(lead)} className="btn-edit rounded-md px-2.5 py-1.5 text-xs font-medium" style={{minHeight: 32}}>ערוך</button>
+                        <button type="button" onClick={() => handleDelete(lead.id)} className="btn-delete rounded-md px-2.5 py-1.5 text-xs font-medium" style={{minHeight: 32}}>מחק</button>
                       </div>
                     </td>
                   </tr>
@@ -500,6 +504,7 @@ function LeadsDashboard() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
