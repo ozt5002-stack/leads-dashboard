@@ -114,9 +114,10 @@
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useMemo, useState } = React;
+const { useEffect, useMemo, useRef, useState } = React;
 
 const STATUSES = ["Lead", "Prospect", "Negotiation", "Won", "Lost"];
+const STORAGE_KEY = "leads";
 
 const INITIAL_LEADS = [
   { id: 1, name: "דנה כהן", company: "Nexora Ltd", status: "Won", value: 24000, source: "Referral", notes: "חתמו חוזה שנתי" },
@@ -201,6 +202,34 @@ function LeadsDashboard() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
+  const hasLoadedRef = useRef(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        setLeads(JSON.parse(stored));
+      } catch {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+  }, [leads]);
+
+  function handleExport() {
+    const blob = new Blob([JSON.stringify(leads, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "leads.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   function handleDelete(id) {
     setLeads((prev) => prev.filter((lead) => lead.id !== id));
@@ -263,9 +292,14 @@ function LeadsDashboard() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-p">ניהול לידים</h1>
-          <button type="button" onClick={() => setIsAdding(true)} className="btn-primary rounded-lg px-4 py-2 text-sm font-medium shadow-sm">
-            + הוסף ליד חדש
-          </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={handleExport} className="btn-ghost rounded-lg border px-4 py-2 text-sm font-medium" style={{borderColor:"var(--border)"}}>
+              Export JSON
+            </button>
+            <button type="button" onClick={() => setIsAdding(true)} className="btn-primary rounded-lg px-4 py-2 text-sm font-medium shadow-sm">
+              + הוסף ליד חדש
+            </button>
+          </div>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-3">

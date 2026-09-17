@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const STATUSES = ["Lead", "Prospect", "Negotiation", "Won", "Lost"];
+const STORAGE_KEY = "leads";
 
 const STATUS_STYLES = {
   Lead: "bg-slate-100 text-slate-700 ring-slate-600/20",
@@ -155,6 +156,36 @@ export default function LeadsDashboard() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
+  const hasLoadedRef = useRef(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        setLeads(JSON.parse(stored));
+      } catch {
+        // ignore malformed data and keep INITIAL_LEADS
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+  }, [leads]);
+
+  function handleExport() {
+    const blob = new Blob([JSON.stringify(leads, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "leads.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   function handleDelete(id) {
     setLeads((prev) => prev.filter((lead) => lead.id !== id));
@@ -217,13 +248,22 @@ export default function LeadsDashboard() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-900">ניהול לידים</h1>
-          <button
-            type="button"
-            onClick={() => setIsAdding(true)}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
-          >
-            + הוסף ליד חדש
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleExport}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              Export JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
+            >
+              + הוסף ליד חדש
+            </button>
+          </div>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-3">
