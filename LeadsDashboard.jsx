@@ -276,6 +276,15 @@ export default function LeadsDashboard() {
 
   const pieData = statusBreakdown.filter((entry) => entry.count > 0);
 
+  const metrics = useMemo(() => {
+    const total = filteredLeads.length;
+    const totalValue = filteredLeads.reduce((sum, lead) => sum + lead.value, 0);
+    const averageValue = total > 0 ? totalValue / total : 0;
+    const wonCount = filteredLeads.filter((lead) => lead.status === "Won").length;
+    const wonRate = total > 0 ? (wonCount / total) * 100 : 0;
+    return { total, averageValue, wonRate };
+  }, [filteredLeads]);
+
   return (
     <div className="min-h-screen bg-slate-50 p-6" dir="rtl">
       <div className="mx-auto max-w-6xl">
@@ -296,6 +305,21 @@ export default function LeadsDashboard() {
             >
               + הוסף ליד חדש
             </button>
+          </div>
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-slate-500">סה״כ לידים</p>
+            <p className="mt-1 text-3xl font-bold text-slate-900">{metrics.total}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-slate-500">ממוצע ערך</p>
+            <p className="mt-1 text-3xl font-bold text-slate-900">{formatCurrency(metrics.averageValue)}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-slate-500">שיעור Won</p>
+            <p className="mt-1 text-3xl font-bold text-slate-900">{metrics.wonRate.toFixed(0)}%</p>
           </div>
         </div>
 

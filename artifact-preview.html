@@ -311,6 +311,15 @@ function LeadsDashboard() {
 
   const pieData = statusBreakdown.filter((entry) => entry.count > 0);
 
+  const metrics = useMemo(() => {
+    const total = filteredLeads.length;
+    const totalValue = filteredLeads.reduce((sum, lead) => sum + lead.value, 0);
+    const averageValue = total > 0 ? totalValue / total : 0;
+    const wonCount = filteredLeads.filter((lead) => lead.status === "Won").length;
+    const wonRate = total > 0 ? (wonCount / total) * 100 : 0;
+    return { total, averageValue, wonRate };
+  }, [filteredLeads]);
+
   return (
     <div className="min-h-screen p-6" dir="rtl">
       <div className="mx-auto max-w-6xl">
@@ -323,6 +332,21 @@ function LeadsDashboard() {
             <button type="button" onClick={() => setIsAdding(true)} className="btn-primary rounded-lg px-4 py-2 text-sm font-medium shadow-sm">
               + הוסף ליד חדש
             </button>
+          </div>
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="surface rounded-xl border p-4 shadow-sm">
+            <p className="text-s text-sm">סה״כ לידים</p>
+            <p className="text-p mt-1 text-3xl font-bold">{metrics.total}</p>
+          </div>
+          <div className="surface rounded-xl border p-4 shadow-sm">
+            <p className="text-s text-sm">ממוצע ערך</p>
+            <p className="text-p mt-1 text-3xl font-bold">{formatCurrency(metrics.averageValue)}</p>
+          </div>
+          <div className="surface rounded-xl border p-4 shadow-sm">
+            <p className="text-s text-sm">שיעור Won</p>
+            <p className="text-p mt-1 text-3xl font-bold">{metrics.wonRate.toFixed(0)}%</p>
           </div>
         </div>
 
