@@ -104,6 +104,11 @@
   .field-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .btn-ghost { color: var(--text-secondary); }
   .btn-ghost:hover { background: var(--row-hover); }
+  .edit-row { background: color-mix(in srgb, var(--accent) 8%, var(--bg-card)); }
+  .cell-input { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
+  .cell-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .btn-save { background: var(--accent); color: var(--accent-fg); }
+  .btn-save:hover { background: var(--accent-hover); }
 </style>
 
 <div id="root"></div>
@@ -132,9 +137,8 @@ function formatCurrency(value) {
 
 const EMPTY_LEAD = { name: "", company: "", status: "Lead", value: "", source: "", notes: "" };
 
-function LeadFormModal({ initialLead, onSave, onClose }) {
-  const [form, setForm] = useState(initialLead ?? EMPTY_LEAD);
-  const isEdit = Boolean(initialLead);
+function AddLeadModal({ onSave, onClose }) {
+  const [form, setForm] = useState(EMPTY_LEAD);
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -148,7 +152,7 @@ function LeadFormModal({ initialLead, onSave, onClose }) {
   return (
     <div className="modal-backdrop fixed inset-0 z-10 flex items-center justify-center p-4" onClick={onClose}>
       <form onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit} className="modal-card w-full max-w-md rounded-xl p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-bold text-p">{isEdit ? "עריכת ליד" : "הוספת ליד חדש"}</h2>
+        <h2 className="mb-4 text-lg font-bold text-p">הוספת ליד חדש</h2>
         <div className="space-y-3">
           <div>
             <label className="field-label mb-1 block text-xs font-medium">שם</label>
@@ -194,8 +198,9 @@ function LeadsDashboard() {
   const [leads, setLeads] = useState(INITIAL_LEADS);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatuses, setActiveStatuses] = useState(new Set(STATUSES));
-  const [editingLead, setEditingLead] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
 
   function handleDelete(id) {
     setLeads((prev) => prev.filter((lead) => lead.id !== id));
@@ -207,9 +212,26 @@ function LeadsDashboard() {
     setIsAdding(false);
   }
 
-  function handleUpdateLead(leadData) {
-    setLeads((prev) => prev.map((lead) => (lead.id === leadData.id ? leadData : lead)));
-    setEditingLead(null);
+  function startEdit(lead) {
+    setEditingId(lead.id);
+    setEditDraft({ ...lead });
+  }
+
+  function updateEditDraft(field, value) {
+    setEditDraft((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function saveEdit() {
+    setLeads((prev) =>
+      prev.map((lead) => (lead.id === editingId ? { ...editDraft, id: editingId, value: Number(editDraft.value) || 0 } : lead))
+    );
+    setEditingId(null);
+    setEditDraft(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft(null);
   }
 
   function toggleStatus(status) {
@@ -287,26 +309,65 @@ function LeadsDashboard() {
               </tr>
             </thead>
             <tbody>
-              {filteredLeads.map((lead) => (
-                <tr key={lead.id} className="row-hover border-t border-t-soft">
-                  <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-p">{lead.name}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-s">{lead.company}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
-                    <span className={`badge badge-${lead.status} inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium`}>
-                      {lead.status}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-s" style={{fontVariantNumeric:"tabular-nums"}}>{formatCurrency(lead.value)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-s">{lead.source}</td>
-                  <td className="max-w-xs truncate px-4 py-3 text-sm text-m" title={lead.notes}>{lead.notes}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => setEditingLead(lead)} className="btn-edit rounded-md px-2 py-1 text-xs font-medium">ערוך</button>
-                      <button type="button" onClick={() => handleDelete(lead.id)} className="btn-delete rounded-md px-2 py-1 text-xs font-medium">מחק</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filteredLeads.map((lead) => {
+                const isEditing = editingId === lead.id;
+
+                if (isEditing) {
+                  return (
+                    <tr key={lead.id} className="edit-row border-t border-t-soft">
+                      <td className="px-4 py-2">
+                        <input type="text" value={editDraft.name} onChange={(e) => updateEditDraft("name", e.target.value)} className="cell-input w-full rounded-md px-2 py-1 text-sm" />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input type="text" value={editDraft.company} onChange={(e) => updateEditDraft("company", e.target.value)} className="cell-input w-full rounded-md px-2 py-1 text-sm" />
+                      </td>
+                      <td className="px-4 py-2">
+                        <select value={editDraft.status} onChange={(e) => updateEditDraft("status", e.target.value)} className="cell-input w-full rounded-md px-2 py-1 text-sm">
+                          {STATUSES.map((status) => (
+                            <option key={status} value={status}>{status}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2">
+                        <input type="number" min="0" value={editDraft.value} onChange={(e) => updateEditDraft("value", e.target.value)} className="cell-input w-full rounded-md px-2 py-1 text-sm" />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input type="text" value={editDraft.source} onChange={(e) => updateEditDraft("source", e.target.value)} className="cell-input w-full rounded-md px-2 py-1 text-sm" />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input type="text" value={editDraft.notes} onChange={(e) => updateEditDraft("notes", e.target.value)} className="cell-input w-full rounded-md px-2 py-1 text-sm" />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2 text-sm">
+                        <div className="flex gap-2">
+                          <button type="button" onClick={saveEdit} className="btn-save rounded-md px-2 py-1 text-xs font-medium">שמור</button>
+                          <button type="button" onClick={cancelEdit} className="btn-ghost rounded-md px-2 py-1 text-xs font-medium">ביטול</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return (
+                  <tr key={lead.id} className="row-hover border-t border-t-soft">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-p">{lead.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-s">{lead.company}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      <span className={`badge badge-${lead.status} inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium`}>
+                        {lead.status}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-s" style={{fontVariantNumeric:"tabular-nums"}}>{formatCurrency(lead.value)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-s">{lead.source}</td>
+                    <td className="max-w-xs truncate px-4 py-3 text-sm text-m" title={lead.notes}>{lead.notes}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => startEdit(lead)} className="btn-edit rounded-md px-2 py-1 text-xs font-medium">ערוך</button>
+                        <button type="button" onClick={() => handleDelete(lead.id)} className="btn-delete rounded-md px-2 py-1 text-xs font-medium">מחק</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {filteredLeads.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-sm text-m">
@@ -319,10 +380,7 @@ function LeadsDashboard() {
         </div>
       </div>
 
-      {isAdding && <LeadFormModal onSave={handleAddLead} onClose={() => setIsAdding(false)} />}
-      {editingLead && (
-        <LeadFormModal initialLead={editingLead} onSave={handleUpdateLead} onClose={() => setEditingLead(null)} />
-      )}
+      {isAdding && <AddLeadModal onSave={handleAddLead} onClose={() => setIsAdding(false)} />}
     </div>
   );
 }

@@ -39,9 +39,8 @@ function formatCurrency(value) {
 
 const EMPTY_LEAD = { name: "", company: "", status: "Lead", value: "", source: "", notes: "" };
 
-function LeadFormModal({ initialLead, onSave, onClose }) {
-  const [form, setForm] = useState(initialLead ?? EMPTY_LEAD);
-  const isEdit = Boolean(initialLead);
+function AddLeadModal({ onSave, onClose }) {
+  const [form, setForm] = useState(EMPTY_LEAD);
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -59,7 +58,7 @@ function LeadFormModal({ initialLead, onSave, onClose }) {
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
       >
-        <h2 className="mb-4 text-lg font-bold text-slate-900">{isEdit ? "עריכת ליד" : "הוספת ליד חדש"}</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-900">הוספת ליד חדש</h2>
 
         <div className="space-y-3">
           <div>
@@ -153,8 +152,9 @@ export default function LeadsDashboard() {
   const [leads, setLeads] = useState(INITIAL_LEADS);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatuses, setActiveStatuses] = useState(new Set(STATUSES));
-  const [editingLead, setEditingLead] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
 
   function handleDelete(id) {
     setLeads((prev) => prev.filter((lead) => lead.id !== id));
@@ -166,9 +166,26 @@ export default function LeadsDashboard() {
     setIsAdding(false);
   }
 
-  function handleUpdateLead(leadData) {
-    setLeads((prev) => prev.map((lead) => (lead.id === leadData.id ? leadData : lead)));
-    setEditingLead(null);
+  function startEdit(lead) {
+    setEditingId(lead.id);
+    setEditDraft({ ...lead });
+  }
+
+  function updateEditDraft(field, value) {
+    setEditDraft((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function saveEdit() {
+    setLeads((prev) =>
+      prev.map((lead) => (lead.id === editingId ? { ...editDraft, id: editingId, value: Number(editDraft.value) || 0 } : lead))
+    );
+    setEditingId(null);
+    setEditDraft(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft(null);
   }
 
   function toggleStatus(status) {
@@ -250,42 +267,125 @@ export default function LeadsDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredLeads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">{lead.name}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{lead.company}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[lead.status]}`}
-                    >
-                      {lead.status}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{formatCurrency(lead.value)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{lead.source}</td>
-                  <td className="max-w-xs truncate px-4 py-3 text-sm text-slate-500" title={lead.notes}>
-                    {lead.notes}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingLead(lead)}
-                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
+              {filteredLeads.map((lead) => {
+                const isEditing = editingId === lead.id;
+
+                if (isEditing) {
+                  return (
+                    <tr key={lead.id} className="bg-indigo-50/40">
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={editDraft.name}
+                          onChange={(e) => updateEditDraft("name", e.target.value)}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={editDraft.company}
+                          onChange={(e) => updateEditDraft("company", e.target.value)}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <select
+                          value={editDraft.status}
+                          onChange={(e) => updateEditDraft("status", e.target.value)}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        >
+                          {STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={editDraft.value}
+                          onChange={(e) => updateEditDraft("value", e.target.value)}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={editDraft.source}
+                          onChange={(e) => updateEditDraft("source", e.target.value)}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={editDraft.notes}
+                          onChange={(e) => updateEditDraft("notes", e.target.value)}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2 text-sm">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={saveEdit}
+                            className="rounded-md px-2 py-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500"
+                          >
+                            שמור
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                          >
+                            ביטול
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return (
+                  <tr key={lead.id} className="hover:bg-slate-50">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">{lead.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{lead.company}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[lead.status]}`}
                       >
-                        ערוך
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(lead.id)}
-                        className="rounded-md px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                      >
-                        מחק
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {lead.status}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{formatCurrency(lead.value)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{lead.source}</td>
+                    <td className="max-w-xs truncate px-4 py-3 text-sm text-slate-500" title={lead.notes}>
+                      {lead.notes}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(lead)}
+                          className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
+                        >
+                          ערוך
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(lead.id)}
+                          className="rounded-md px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                        >
+                          מחק
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {filteredLeads.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-400">
@@ -298,16 +398,7 @@ export default function LeadsDashboard() {
         </div>
       </div>
 
-      {isAdding && (
-        <LeadFormModal onSave={handleAddLead} onClose={() => setIsAdding(false)} />
-      )}
-      {editingLead && (
-        <LeadFormModal
-          initialLead={editingLead}
-          onSave={handleUpdateLead}
-          onClose={() => setEditingLead(null)}
-        />
-      )}
+      {isAdding && <AddLeadModal onSave={handleAddLead} onClose={() => setIsAdding(false)} />}
     </div>
   );
 }
