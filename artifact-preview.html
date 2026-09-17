@@ -1,0 +1,246 @@
+<title>Leads Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<style>
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --border: #e2e8f0;
+    --border-soft: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --accent-fg: #ffffff;
+    --row-hover: #f8fafc;
+    --danger: #dc2626;
+    --danger-bg-hover: #fef2f2;
+    --status-lead-bg: #f1f5f9; --status-lead-fg: #334155; --status-lead-ring: rgba(51,65,85,0.16);
+    --status-prospect-bg: #eff6ff; --status-prospect-fg: #1d4ed8; --status-prospect-ring: rgba(29,78,216,0.16);
+    --status-negotiation-bg: #fffbeb; --status-negotiation-fg: #b45309; --status-negotiation-ring: rgba(180,83,9,0.16);
+    --status-won-bg: #f0fdf4; --status-won-fg: #15803d; --status-won-ring: rgba(21,128,61,0.16);
+    --status-lost-bg: #fef2f2; --status-lost-fg: #b91c1c; --status-lost-ring: rgba(185,28,28,0.16);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg-page: #0b1220;
+      --bg-card: #111827;
+      --border: #1f2937;
+      --border-soft: #1a2333;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --accent-fg: #ffffff;
+      --row-hover: #16202f;
+      --danger: #f87171;
+      --danger-bg-hover: rgba(248,113,113,0.1);
+      --status-lead-bg: #1e293b; --status-lead-fg: #cbd5e1; --status-lead-ring: rgba(203,213,225,0.15);
+      --status-prospect-bg: #1e293b; --status-prospect-fg: #93c5fd; --status-prospect-ring: rgba(147,197,253,0.18);
+      --status-negotiation-bg: #2a2210; --status-negotiation-fg: #fbbf24; --status-negotiation-ring: rgba(251,191,36,0.18);
+      --status-won-bg: #102015; --status-won-fg: #4ade80; --status-won-ring: rgba(74,222,128,0.18);
+      --status-lost-bg: #2a1414; --status-lost-fg: #f87171; --status-lost-ring: rgba(248,113,113,0.18);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg-page: #0b1220;
+    --bg-card: #111827;
+    --border: #1f2937;
+    --border-soft: #1a2333;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-fg: #ffffff;
+    --row-hover: #16202f;
+    --danger: #f87171;
+    --danger-bg-hover: rgba(248,113,113,0.1);
+    --status-lead-bg: #1e293b; --status-lead-fg: #cbd5e1; --status-lead-ring: rgba(203,213,225,0.15);
+    --status-prospect-bg: #1e293b; --status-prospect-fg: #93c5fd; --status-prospect-ring: rgba(147,197,253,0.18);
+    --status-negotiation-bg: #2a2210; --status-negotiation-fg: #fbbf24; --status-negotiation-ring: rgba(251,191,36,0.18);
+    --status-won-bg: #102015; --status-won-fg: #4ade80; --status-won-ring: rgba(74,222,128,0.18);
+    --status-lost-bg: #2a1414; --status-lost-fg: #f87171; --status-lost-ring: rgba(248,113,113,0.18);
+  }
+
+  body { background: var(--bg-page); margin: 0; }
+  .surface { background: var(--bg-card); border-color: var(--border); }
+  .text-p { color: var(--text-primary); }
+  .text-s { color: var(--text-secondary); }
+  .text-m { color: var(--text-muted); }
+  .border-t-soft { border-color: var(--border); }
+  .row-hover:hover { background: var(--row-hover); }
+  .thead-bg { background: var(--border-soft); }
+  .btn-primary { background: var(--accent); color: var(--accent-fg); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-edit { color: var(--accent); }
+  .btn-edit:hover { background: var(--status-prospect-bg); }
+  .btn-delete { color: var(--danger); }
+  .btn-delete:hover { background: var(--danger-bg-hover); }
+  .badge { border-width: 1px; border-style: solid; }
+  .badge-Lead { background: var(--status-lead-bg); color: var(--status-lead-fg); border-color: var(--status-lead-ring); }
+  .badge-Prospect { background: var(--status-prospect-bg); color: var(--status-prospect-fg); border-color: var(--status-prospect-ring); }
+  .badge-Negotiation { background: var(--status-negotiation-bg); color: var(--status-negotiation-fg); border-color: var(--status-negotiation-ring); }
+  .badge-Won { background: var(--status-won-bg); color: var(--status-won-fg); border-color: var(--status-won-ring); }
+  .badge-Lost { background: var(--status-lost-bg); color: var(--status-lost-fg); border-color: var(--status-lost-ring); }
+  .search-input { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
+  .search-input::placeholder { color: var(--text-muted); }
+  .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .filter-pill { border-width: 1px; border-style: solid; }
+  .filter-inactive { background: var(--bg-card); color: var(--text-muted); border-color: var(--border); }
+  .filter-active-Lead { background: #475569; color: #fff; border-color: #475569; }
+  .filter-active-Prospect { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .filter-active-Negotiation { background: #d97706; color: #fff; border-color: #d97706; }
+  .filter-active-Won { background: #16a34a; color: #fff; border-color: #16a34a; }
+  .filter-active-Lost { background: #dc2626; color: #fff; border-color: #dc2626; }
+</style>
+
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useMemo, useState } = React;
+
+const STATUSES = ["Lead", "Prospect", "Negotiation", "Won", "Lost"];
+
+const INITIAL_LEADS = [
+  { id: 1, name: "דנה כהן", company: "Nexora Ltd", status: "Won", value: 24000, source: "Referral", notes: "חתמו חוזה שנתי" },
+  { id: 2, name: "יוסי לוי", company: "BluePeak Tech", status: "Negotiation", value: 15500, source: "Website", notes: "מחכים לאישור תקציב" },
+  { id: 3, name: "מאיה שגיא", company: "Greenfield Foods", status: "Prospect", value: 8200, source: "LinkedIn", notes: "פגישה נקבעה לשבוע הבא" },
+  { id: 4, name: "אורי בן דוד", company: "Skyline Media", status: "Lead", value: 5000, source: "Cold Call", notes: "עדיין לא נוצר קשר ראשוני" },
+  { id: 5, name: "נועה פרץ", company: "Orbit Systems", status: "Won", value: 32000, source: "Referral", notes: "לקוח מרוצה, אפשרות להרחבה" },
+  { id: 6, name: "עידן שמעוני", company: "Fusion Labs", status: "Lost", value: 12000, source: "Website", notes: "בחרו במתחרה" },
+  { id: 7, name: "טל אברהם", company: "Cedar & Co", status: "Prospect", value: 9800, source: "Trade Show", notes: "מעוניינים בהדגמה" },
+  { id: 8, name: "ליאור גל", company: "Northgate Retail", status: "Negotiation", value: 21000, source: "LinkedIn", notes: "מו״מ על מחיר" },
+  { id: 9, name: "שירה מזרחי", company: "Vantage Group", status: "Lead", value: 3000, source: "Email Campaign", notes: "הורידו חוברת מוצר" },
+  { id: 10, name: "רועי אלון", company: "Harbor Solutions", status: "Won", value: 18500, source: "Referral", notes: "חתימה חודשית" },
+];
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+}
+
+function LeadsDashboard() {
+  const [leads, setLeads] = useState(INITIAL_LEADS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeStatuses, setActiveStatuses] = useState(new Set(STATUSES));
+
+  function handleDelete(id) {
+    setLeads((prev) => prev.filter((lead) => lead.id !== id));
+  }
+
+  function toggleStatus(status) {
+    setActiveStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  }
+
+  const filteredLeads = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return leads.filter((lead) => {
+      const matchesStatus = activeStatuses.has(lead.status);
+      const matchesQuery =
+        query === "" ||
+        lead.name.toLowerCase().includes(query) ||
+        lead.company.toLowerCase().includes(query);
+      return matchesStatus && matchesQuery;
+    });
+  }, [leads, searchQuery, activeStatuses]);
+
+  return (
+    <div className="min-h-screen p-6" dir="rtl">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-p">ניהול לידים</h1>
+          <button type="button" className="btn-primary rounded-lg px-4 py-2 text-sm font-medium shadow-sm">
+            + הוסף ליד חדש
+          </button>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="חיפוש לפי שם או חברה..."
+            className="search-input w-full max-w-xs rounded-lg px-3 py-2 text-sm"
+          />
+          <div className="flex flex-wrap gap-2">
+            {STATUSES.map((status) => {
+              const isActive = activeStatuses.has(status);
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => toggleStatus(status)}
+                  className={`filter-pill rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    isActive ? `filter-active-${status}` : "filter-inactive"
+                  }`}
+                >
+                  {status}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="surface overflow-hidden rounded-xl border shadow-sm">
+          <table className="min-w-full text-right">
+            <thead className="thead-bg">
+              <tr>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-m">שם</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-m">חברה</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-m">סטטוס</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-m">ערך</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-m">מקור</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-m">הערות</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-m">פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLeads.map((lead) => (
+                <tr key={lead.id} className="row-hover border-t border-t-soft">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-p">{lead.name}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-s">{lead.company}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm">
+                    <span className={`badge badge-${lead.status} inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium`}>
+                      {lead.status}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-s" style={{fontVariantNumeric:"tabular-nums"}}>{formatCurrency(lead.value)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-s">{lead.source}</td>
+                  <td className="max-w-xs truncate px-4 py-3 text-sm text-m" title={lead.notes}>{lead.notes}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm">
+                    <div className="flex gap-2">
+                      <button type="button" className="btn-edit rounded-md px-2 py-1 text-xs font-medium">ערוך</button>
+                      <button type="button" onClick={() => handleDelete(lead.id)} className="btn-delete rounded-md px-2 py-1 text-xs font-medium">מחק</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredLeads.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-m">
+                    {leads.length === 0 ? "אין לידים להצגה" : "לא נמצאו לידים התואמים לחיפוש/סינון"}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<LeadsDashboard />);
+</script>
