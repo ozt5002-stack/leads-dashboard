@@ -15,6 +15,22 @@ import {
 const STATUSES = ["Lead", "Prospect", "Negotiation", "Won", "Lost"];
 const STORAGE_KEY = "leads";
 
+const AIRTABLE_BASE_ID = "app1J5xG4dxtt52N9";
+const AIRTABLE_TABLE_ID = "tblskKJU5N03BDSjh";
+const AIRTABLE_TOKEN_KEY = "airtable_pat";
+
+function mapAirtableRecords(records) {
+  return records.map((record, index) => ({
+    id: index + 1,
+    name: record.fields["שם"] || "",
+    company: record.fields["חברה"] || "",
+    status: record.fields["סטטוס"] || "Lead",
+    value: Number(record.fields["ערך"]) || 0,
+    source: record.fields["מקור"] || "",
+    notes: record.fields["הערות"] || "",
+  }));
+}
+
 const STATUS_CHART_COLORS = {
   Lead: "#2563eb",
   Prospect: "#9333ea",
@@ -176,9 +192,27 @@ export default function LeadsDashboard() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
+  const [syncStatus, setSyncStatus] = useState("loading");
   const hasLoadedRef = useRef(false);
 
-  useEffect(() => {
+  async function loadFromAirtable(token) {
+    try {
+      const res = await fetch(
+        `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_ID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error(`Airtable request failed: ${res.status}`);
+      const data = await res.json();
+      setLeads(mapAirtableRecords(data.records));
+      setSyncStatus("airtable");
+      return true;
+    } catch (err) {
+      console.error("Airtable fetch failed, falling back to local data:", err);
+      return false;
+    }
+  }
+
+  function loadFromLocalOrDefault() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
@@ -187,6 +221,33 @@ export default function LeadsDashboard() {
         // ignore malformed data and keep INITIAL_LEADS
       }
     }
+  }
+
+  function handleConnectAirtable() {
+    const token = window.prompt("הדבק כאן את ה-Airtable Personal Access Token (read-only):");
+    if (!token) return;
+    localStorage.setItem(AIRTABLE_TOKEN_KEY, token);
+    setSyncStatus("loading");
+    loadFromAirtable(token).then((ok) => {
+      if (!ok) {
+        localStorage.removeItem(AIRTABLE_TOKEN_KEY);
+        loadFromLocalOrDefault();
+        setSyncStatus("local");
+      }
+    });
+  }
+
+  useEffect(() => {
+    async function init() {
+      const savedToken = localStorage.getItem(AIRTABLE_TOKEN_KEY);
+      if (savedToken) {
+        const ok = await loadFromAirtable(savedToken);
+        if (ok) return;
+      }
+      loadFromLocalOrDefault();
+      setSyncStatus(savedToken ? "local" : "no-token");
+    }
+    init();
   }, []);
 
   useEffect(() => {
@@ -289,8 +350,23 @@ export default function LeadsDashboard() {
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6" dir="rtl">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">ניהול לידים</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">ניהול לידים</h1>
+            <p className="mt-1 text-xs text-slate-400">
+              {syncStatus === "loading" && "טוען..."}
+              {syncStatus === "airtable" && "✓ מסונכרן עם Airtable"}
+              {syncStatus === "local" && "⚠ לא הצלחתי להתחבר ל-Airtable, מציג נתונים מקומיים"}
+              {syncStatus === "no-token" && "לא מחובר ל-Airtable — מציג נתוני דוגמה"}
+            </p>
+          </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleConnectAirtable}
+              className="min-h-[44px] rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100"
+            >
+              חבר Airtable
+            </button>
             <button
               type="button"
               onClick={handleExport}
