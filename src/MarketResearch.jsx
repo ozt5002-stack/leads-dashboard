@@ -141,7 +141,22 @@ function apifyStartUrls(sources, arielPages) {
   return urls;
 }
 
-async function runApifyScraper(token, sources, arielPages) {
+const APIFY_FINAL_STATUSES = ["SUCCEEDED", "FAILED", "TIMED-OUT", "ABORTED"];
+
+// Every API call goes through here so an error always names the service and shows
+// what came back, even when the body isn't JSON (e.g. an HTML error page).
+async function fetchJson(label, url, options) {
+  const res = await fetch(url, options);
+  const text = await res.text();
+  if (!res.ok) throw new Error(`${label} ${res.status}: ${text.slice(0, 200)}`);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`${label} ${res.status} החזיר תשובה שאינה JSON: ${text.slice(0, 120)}`);
+  }
+}
+
+async function runApifyScraper(token, sources, arielPages, onProgress) {
   const input = {
     startUrls: apifyStartUrls(sources, arielPages),
     pageFunction: APIFY_PAGE_FUNCTION,
@@ -149,19 +164,31 @@ async function runApifyScraper(token, sources, arielPages) {
     maxConcurrency: 3,
     proxyConfiguration: { useApifyProxy: true },
   };
-  const res = await fetch(
-    `https://api.apify.com/v2/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?timeout=280`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }
-  );
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Apify ${res.status}: ${text.slice(0, 200)}`);
+  const auth = { Authorization: `Bearer ${token}` };
+
+  // Start the run and poll it, instead of holding one HTTP request open for minutes
+  // (fragile on mobile networks).
+  const started = await fetchJson("Apify (הפעלת ריצה)", `https://api.apify.com/v2/acts/${APIFY_ACTOR}/runs`, {
+    method: "POST",
+    headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  let run = started.data;
+  const consoleUrl = `https://console.apify.com/view/runs/${run.id}`;
+  const deadline = Date.now() + 10 * 60 * 1000;
+  while (!APIFY_FINAL_STATUSES.includes(run.status)) {
+    if (Date.now() > deadline) throw new Error(`הריצה ב-Apify לא הסתיימה תוך 10 דקות: ${consoleUrl}`);
+    onProgress(`סורק דרך Apify... סטטוס: ${run.status}`);
+    const polled = await fetchJson("Apify (סטטוס ריצה)", `https://api.apify.com/v2/actor-runs/${run.id}?waitForFinish=30`, { headers: auth });
+    run = polled.data;
   }
-  const items = await res.json();
+  if (run.status !== "SUCCEEDED") throw new Error(`הריצה ב-Apify הסתיימה בסטטוס ${run.status}: ${consoleUrl}`);
+
+  const items = await fetchJson(
+    "Apify (תוצאות)",
+    `https://api.apify.com/v2/datasets/${run.defaultDatasetId}/items?clean=true&format=json`,
+    { headers: auth }
+  );
   return items.filter((item) => item && item.url && item.title);
 }
 
@@ -191,15 +218,11 @@ async function upsertToAirtable(token, items) {
   const scrapedAt = new Date().toISOString();
   for (let i = 0; i < items.length; i += 10) {
     const batch = items.slice(i, i + 10).map((item) => ({ fields: toAirtableFields(item, scrapedAt) }));
-    const res = await fetch(`https://api.airtable.com/v0/${MR_AIRTABLE_BASE_ID}/${MR_FORUM_TABLE_ID}`, {
+    await fetchJson("Airtable (שמירה)", `https://api.airtable.com/v0/${MR_AIRTABLE_BASE_ID}/${MR_FORUM_TABLE_ID}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ performUpsert: { fieldsToMergeOn: ["קישור"] }, records: batch, typecast: true }),
     });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Airtable ${res.status}: ${text.slice(0, 200)}`);
-    }
     await sleep(250); // Airtable allows 5 requests/sec per base
   }
 }
@@ -210,11 +233,9 @@ async function fetchForumLeads(token) {
   do {
     const params = new URLSearchParams({ pageSize: "100" });
     if (offset) params.set("offset", offset);
-    const res = await fetch(`https://api.airtable.com/v0/${MR_AIRTABLE_BASE_ID}/${MR_FORUM_TABLE_ID}?${params}`, {
+    const data = await fetchJson("Airtable (קריאה)", `https://api.airtable.com/v0/${MR_AIRTABLE_BASE_ID}/${MR_FORUM_TABLE_ID}?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(`Airtable ${res.status}`);
-    const data = await res.json();
     records.push(...data.records);
     offset = data.offset;
   } while (offset);
@@ -235,12 +256,11 @@ async function fetchForumLeads(token) {
 }
 
 async function updateForumLeadStatus(token, recordId, status) {
-  const res = await fetch(`https://api.airtable.com/v0/${MR_AIRTABLE_BASE_ID}/${MR_FORUM_TABLE_ID}/${recordId}`, {
+  await fetchJson("Airtable (עדכון סטטוס)", `https://api.airtable.com/v0/${MR_AIRTABLE_BASE_ID}/${MR_FORUM_TABLE_ID}/${recordId}`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ fields: { "סטטוס": status } }),
   });
-  if (!res.ok) throw new Error(`Airtable ${res.status}`);
 }
 
 function readStoredToken(key) {
@@ -306,8 +326,8 @@ function MarketResearch() {
     if (!apifyToken || !airtableToken || sources.length === 0) return;
     setBusy(true);
     try {
-      setMessage("סורק דרך Apify... (יכול לקחת 1–4 דקות)");
-      const scraped = await runApifyScraper(apifyToken, sources, arielPages);
+      setMessage("מפעיל ריצה ב-Apify... (יכול לקחת 1–4 דקות, השאר את הדף פתוח)");
+      const scraped = await runApifyScraper(apifyToken, sources, arielPages, setMessage);
       const counts = sources.map((s) => `${s}: ${scraped.filter((i) => i.source === s).length}`).join(" · ");
       if (scraped.length === 0) {
         setMessage(`Apify החזיר 0 פריטים (${counts}). כנראה מבנה האתר השתנה — בדוק את הלוג של הריצה ב-Apify Console.`);
