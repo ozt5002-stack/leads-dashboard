@@ -615,6 +615,39 @@ const TOPIC_KEYWORDS = [
   ["תקנות", ["תקנה", "תקנות", "חוק"]],
 ];
 
+// A question with no replies only counts as "stuck" after this many days;
+// newer ones may simply not have been answered yet.
+const STUCK_AFTER_DAYS = 7;
+
+const AGE_UNITS = [
+  ["שעתיים", 2 / 24], ["יומיים", 2], ["שבועיים", 14], ["חודשיים", 60], ["שנתיים", 730],
+  ["דק", 1 / 1440], ["שעה", 1 / 24], ["שעות", 1 / 24], ["יום", 1], ["ימים", 1],
+  ["שבוע", 7], ["חודש", 30], ["שנה", 365], ["שנים", 365],
+];
+
+// bbPress shows relative times like "לפני 3 ימים, 4 שעות" or "לפני שבועיים";
+// the first (largest) unit is enough. Returns null when the text can't be read.
+function parseAgeDays(text) {
+  const match = (text || "").match(/(\d+)?\s*(שעתיים|יומיים|שבועיים|חודשיים|שנתיים|דק|שעה|שעות|יום|ימים|שבוע|חודש|שנה|שנים)/);
+  if (!match) return null;
+  const perUnit = AGE_UNITS.find(([word]) => word === match[2])[1];
+  return (match[1] ? parseInt(match[1], 10) : 1) * perUnit;
+}
+
+// Age measured from now: the age shown at scrape time plus the time since that scrape.
+function questionAgeDays(item) {
+  const ageAtScrape = parseAgeDays(item.date);
+  if (ageAtScrape == null || !item.scrapedAt) return null;
+  return ageAtScrape + (Date.now() - new Date(item.scrapedAt).getTime()) / 86400000;
+}
+
+// Unknown age counts as stuck, so an unreadable date never hides a question.
+function isStuck(item) {
+  if (item.type !== TYPE_QUESTION || item.replies !== 0) return false;
+  const age = questionAgeDays(item);
+  return age == null || age >= STUCK_AFTER_DAYS;
+}
+
 function classifyTopic(text) {
   const lower = (text || "").toLowerCase();
   for (const [topic, words] of TOPIC_KEYWORDS) {
@@ -783,6 +816,7 @@ async function fetchForumLeads(token) {
     replies: Number(record.fields["תגובות"]) || 0,
     rating: record.fields["דירוג"],
     date: record.fields["תאריך"] || "",
+    scrapedAt: record.fields["נסרק ב"] || "",
     status: record.fields["סטטוס"] || "חדש",
   }));
 }
@@ -895,16 +929,17 @@ function MarketResearch() {
     const counts = {};
     questions.forEach((q) => {
       const topic = q.topic || "אחר";
-      counts[topic] = counts[topic] || { topic, answered: 0, unanswered: 0 };
-      counts[topic][q.replies === 0 ? "unanswered" : "answered"] += 1;
+      counts[topic] = counts[topic] || { topic, answered: 0, waiting: 0, unanswered: 0 };
+      const bucket = q.replies > 0 ? "answered" : isStuck(q) ? "unanswered" : "waiting";
+      counts[topic][bucket] += 1;
     });
     // Topics where electricians get stuck without an answer come first.
     return Object.values(counts).sort(
-      (a, b) => b.unanswered - a.unanswered || b.answered + b.unanswered - (a.answered + a.unanswered)
+      (a, b) => b.unanswered - a.unanswered || b.answered + b.waiting + b.unanswered - (a.answered + a.waiting + a.unanswered)
     );
   }, [questions]);
 
-  const unansweredCount = questions.filter((q) => q.replies === 0).length;
+  const unansweredCount = questions.filter(isStuck).length;
   const ratedCompetitors = competitors.filter((c) => typeof c.rating === "number");
   const avgRating = ratedCompetitors.length
     ? ratedCompetitors.reduce((sum, c) => sum + c.rating, 0) / ratedCompetitors.length
@@ -913,7 +948,7 @@ function MarketResearch() {
   const visibleItems = useMemo(() => {
     return items.filter((i) => {
       if (typeFilter !== "all" && i.type !== typeFilter) return false;
-      if (onlyUnanswered && !(i.type === TYPE_QUESTION && i.replies === 0)) return false;
+      if (onlyUnanswered && !isStuck(i)) return false;
       return true;
     });
   }, [items, typeFilter, onlyUnanswered]);
@@ -961,7 +996,7 @@ function MarketResearch() {
           <p className="text-p mt-1 text-3xl font-bold">{questions.length}</p>
         </div>
         <div className="surface rounded-xl border p-4 shadow-sm">
-          <p className="text-s text-sm">בלי תשובה</p>
+          <p className="text-s text-sm">בלי תשובה מעל שבוע</p>
           <p className="text-p mt-1 text-3xl font-bold">{unansweredCount}</p>
         </div>
         <div className="surface rounded-xl border p-4 shadow-sm">
@@ -984,7 +1019,8 @@ function MarketResearch() {
                 <YAxis type="category" dataKey="topic" width={110} orientation="right" tick={{ fontSize: 12, fill: "#64748b", textAnchor: "end" }} />
                 <Tooltip formatter={(value, name) => [`${value} שאלות`, name]} />
                 <Legend />
-                <Bar dataKey="unanswered" name="בלי תשובה" stackId="q" fill="var(--accent)" />
+                <Bar dataKey="unanswered" name="בלי תשובה מעל שבוע" stackId="q" fill="var(--accent)" />
+                <Bar dataKey="waiting" name="חדשה, עוד מחכה" stackId="q" fill="var(--status-negotiation-fg)" />
                 <Bar dataKey="answered" name="נענו" stackId="q" fill="var(--text-muted)" />
               </BarChart>
             </ResponsiveContainer>
@@ -1004,7 +1040,7 @@ function MarketResearch() {
         ))}
         <label className="text-s flex items-center gap-2 text-sm">
           <input type="checkbox" checked={onlyUnanswered} onChange={(e) => setOnlyUnanswered(e.target.checked)} />
-          רק שאלות בלי תשובה
+          רק שאלות בלי תשובה מעל שבוע
         </label>
       </div>
 
