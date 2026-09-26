@@ -1,3 +1,113 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --border: #e2e8f0;
+    --border-soft: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --accent-fg: #ffffff;
+    --row-hover: #f8fafc;
+    --danger: #dc2626;
+    --danger-bg-hover: #fef2f2;
+    --status-lead-bg: #eff6ff; --status-lead-fg: #1d4ed8; --status-lead-ring: rgba(29,78,216,0.16);
+    --status-prospect-bg: #faf5ff; --status-prospect-fg: #7e22ce; --status-prospect-ring: rgba(126,34,206,0.16);
+    --status-negotiation-bg: #fffbeb; --status-negotiation-fg: #b45309; --status-negotiation-ring: rgba(180,83,9,0.16);
+    --status-won-bg: #f0fdf4; --status-won-fg: #15803d; --status-won-ring: rgba(21,128,61,0.16);
+    --status-lost-bg: #fef2f2; --status-lost-fg: #b91c1c; --status-lost-ring: rgba(185,28,28,0.16);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg-page: #0b1220;
+      --bg-card: #111827;
+      --border: #1f2937;
+      --border-soft: #1a2333;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --accent-fg: #ffffff;
+      --row-hover: #16202f;
+      --danger: #f87171;
+      --danger-bg-hover: rgba(248,113,113,0.1);
+      --status-lead-bg: #1e293b; --status-lead-fg: #93c5fd; --status-lead-ring: rgba(147,197,253,0.18);
+      --status-prospect-bg: #241b33; --status-prospect-fg: #d8b4fe; --status-prospect-ring: rgba(216,180,254,0.18);
+      --status-negotiation-bg: #2a2210; --status-negotiation-fg: #fbbf24; --status-negotiation-ring: rgba(251,191,36,0.18);
+      --status-won-bg: #102015; --status-won-fg: #4ade80; --status-won-ring: rgba(74,222,128,0.18);
+      --status-lost-bg: #2a1414; --status-lost-fg: #f87171; --status-lost-ring: rgba(248,113,113,0.18);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg-page: #0b1220;
+    --bg-card: #111827;
+    --border: #1f2937;
+    --border-soft: #1a2333;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-fg: #ffffff;
+    --row-hover: #16202f;
+    --danger: #f87171;
+    --danger-bg-hover: rgba(248,113,113,0.1);
+    --status-lead-bg: #1e293b; --status-lead-fg: #93c5fd; --status-lead-ring: rgba(147,197,253,0.18);
+    --status-prospect-bg: #241b33; --status-prospect-fg: #d8b4fe; --status-prospect-ring: rgba(216,180,254,0.18);
+    --status-negotiation-bg: #2a2210; --status-negotiation-fg: #fbbf24; --status-negotiation-ring: rgba(251,191,36,0.18);
+    --status-won-bg: #102015; --status-won-fg: #4ade80; --status-won-ring: rgba(74,222,128,0.18);
+    --status-lost-bg: #2a1414; --status-lost-fg: #f87171; --status-lost-ring: rgba(248,113,113,0.18);
+  }
+
+  body { background: var(--bg-page); margin: 0; }
+  .surface { background: var(--bg-card); border-color: var(--border); }
+  .text-p { color: var(--text-primary); }
+  .text-s { color: var(--text-secondary); }
+  .text-m { color: var(--text-muted); }
+  .border-t-soft { border-color: var(--border); }
+  .row-hover:hover { background: var(--row-hover); }
+  .thead-bg { background: var(--border-soft); }
+  .btn-primary { background: var(--accent); color: var(--accent-fg); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-edit { color: var(--accent); }
+  .btn-edit:hover { background: var(--status-prospect-bg); }
+  .btn-delete { color: var(--danger); }
+  .btn-delete:hover { background: var(--danger-bg-hover); }
+  .badge { border-width: 1px; border-style: solid; }
+  .badge-Lead { background: var(--status-lead-bg); color: var(--status-lead-fg); border-color: var(--status-lead-ring); }
+  .badge-Prospect { background: var(--status-prospect-bg); color: var(--status-prospect-fg); border-color: var(--status-prospect-ring); }
+  .badge-Negotiation { background: var(--status-negotiation-bg); color: var(--status-negotiation-fg); border-color: var(--status-negotiation-ring); }
+  .badge-Won { background: var(--status-won-bg); color: var(--status-won-fg); border-color: var(--status-won-ring); }
+  .badge-Lost { background: var(--status-lost-bg); color: var(--status-lost-fg); border-color: var(--status-lost-ring); }
+  .search-input { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
+  .search-input::placeholder { color: var(--text-muted); }
+  .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .filter-pill { border-width: 1px; border-style: solid; }
+  .filter-inactive { background: var(--bg-card); color: var(--text-muted); border-color: var(--border); }
+  .filter-active-Lead { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .filter-active-Prospect { background: #9333ea; color: #fff; border-color: #9333ea; }
+  .filter-active-Negotiation { background: #d97706; color: #fff; border-color: #d97706; }
+  .filter-active-Won { background: #16a34a; color: #fff; border-color: #16a34a; }
+  .filter-active-Lost { background: #dc2626; color: #fff; border-color: #dc2626; }
+  .modal-backdrop { background: rgba(2, 6, 23, 0.5); }
+  .modal-card { background: var(--bg-card); }
+  .field-label { color: var(--text-secondary); }
+  .field-input { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
+  .field-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .btn-ghost { color: var(--text-secondary); }
+  .btn-ghost:hover { background: var(--row-hover); }
+  .edit-row { background: color-mix(in srgb, var(--accent) 8%, var(--bg-card)); }
+  .cell-input { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
+  .cell-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .btn-save { background: var(--accent); color: var(--accent-fg); }
+  .btn-save:hover { background: var(--accent-hover); }
+  .tab-bar { border-color: var(--border); }
+  .tab { color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab:hover { color: var(--text-primary); }
+  .tab-active { color: var(--accent); border-bottom-color: var(--accent); }
