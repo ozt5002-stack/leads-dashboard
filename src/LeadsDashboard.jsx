@@ -224,7 +224,7 @@ export default function LeadsDashboard() {
   }
 
   function handleConnectAirtable() {
-    const token = window.prompt("הדבק כאן את ה-Airtable Personal Access Token (read-only):");
+    const token = window.prompt("הדבק כאן את ה-Airtable Personal Access Token (עם הרשאות read + write):");
     if (!token) return;
     localStorage.setItem(AIRTABLE_TOKEN_KEY, token);
     setSyncStatus("loading");
