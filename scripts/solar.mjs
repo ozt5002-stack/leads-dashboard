@@ -14,7 +14,7 @@ for (const city of CITIES) {
   const result = await fetchPvgis(city);
   console.log(`${city.name}: ${Math.round(result.yearly)} kWh/year per 1 kWp (tilt ${result.slope}°, azimuth ${result.azimuth}°)`);
   results.push(result);
-  await sleep(200); // stay well under PVGIS's 30 calls/second limit
+  await sleep(1000); // be gentle: PVGIS resets connections under back-to-back calls
 }
 
 await upsertSolarEstimates(airtableToken, results);
