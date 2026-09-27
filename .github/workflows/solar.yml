@@ -1,0 +1,23 @@
+name: Solar Estimates (PVGIS)
+
+# Long-term solar averages barely change, so once a month (plus manual runs) is enough.
+on:
+  schedule:
+    - cron: "23 5 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  solar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/solar.mjs
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
