@@ -23,6 +23,21 @@ export const CITIES = [
   { name: "אילת", lat: 29.5577, lon: 34.9519 },
 ];
 
+// PVGIS sometimes drops the connection between back-to-back requests (ECONNRESET).
+// Network-level failures (fetch throws a TypeError) are retried with a growing pause;
+// HTTP errors like 400 are not, since retrying a bad request can't help.
+async function withRetry(fn, attempts = 4) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!(err instanceof TypeError) || attempt >= attempts) throw err;
+      console.log(`  retry ${attempt}/${attempts - 1} after network error: ${err.cause?.code || err.message}`);
+      await sleep(2000 * attempt);
+    }
+  }
+}
+
 // PVGIS picks the optimal tilt and azimuth itself (optimalangles=1).
 export async function fetchPvgis(city) {
   const params = new URLSearchParams({
@@ -33,7 +48,7 @@ export async function fetchPvgis(city) {
     optimalangles: "1",
     outputformat: "json",
   });
-  const data = await fetchJson(`PVGIS (${city.name})`, `${PVGIS_URL}?${params}`);
+  const data = await withRetry(() => fetchJson(`PVGIS (${city.name})`, `${PVGIS_URL}?${params}`));
   const monthly = data?.outputs?.monthly?.fixed;
   const yearly = data?.outputs?.totals?.fixed?.E_y;
   if (!Array.isArray(monthly) || monthly.length !== 12 || typeof yearly !== "number") {
