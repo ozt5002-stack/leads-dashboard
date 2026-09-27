@@ -600,6 +600,7 @@ const SOURCE_PRO = "pro.co.il";
 const TYPE_QUESTION = "שאלה בפורום";
 const TYPE_COMPETITOR = "חשמלאי מתחרה";
 const REVIEW_STATUSES = ["חדש", "רלוונטי", "לא רלוונטי"];
+const SCRAPE_WORKFLOW_URL = "https://github.com/ozt5002-stack/leads-dashboard/actions/workflows/scrape.yml";
 
 // Keyword buckets used to tag every scraped title with a topic.
 const TOPIC_KEYWORDS = [
@@ -743,7 +744,7 @@ async function fetchJson(label, url, options) {
   }
 }
 
-async function runApifyScraper(token, sources, arielPages, onProgress) {
+async function runApifyScraper(token, sources, arielPages, onProgress = () => {}) {
   const input = {
     startUrls: apifyStartUrls(sources, arielPages),
     pageFunction: APIFY_PAGE_FUNCTION,
@@ -981,8 +982,15 @@ function MarketResearch() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-s text-xs">
             <p>Apify: {apifyToken ? "✓ מחובר" : "לא מחובר"} · Airtable: {airtableToken ? "✓ מחובר" : "לא מחובר"}</p>
+            <p className="mt-1">
+              סריקה אוטומטית רצה כל בוקר ב-GitHub Actions ·{" "}
+              <a href={SCRAPE_WORKFLOW_URL} target="_blank" rel="noopener noreferrer" className="btn-edit underline">הפעל עכשיו</a>
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={!airtableToken || busy} onClick={() => reload()} className="btn-ghost rounded-lg border px-4 py-2.5 text-sm font-medium disabled:opacity-50" style={{ borderColor: "var(--border)", minHeight: 44 }}>
+              רענן נתונים
+            </button>
             <button type="button" onClick={handleConnectApify} className="btn-ghost rounded-lg border px-4 py-2.5 text-sm font-medium" style={{ borderColor: "var(--border)", minHeight: 44 }}>
               חבר Apify
             </button>

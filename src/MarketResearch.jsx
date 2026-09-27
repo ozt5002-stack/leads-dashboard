@@ -1,32 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  MR_AIRTABLE_BASE_ID,
+  MR_FORUM_TABLE_ID,
+  SOURCE_ARIEL,
+  SOURCE_PRO,
+  TYPE_COMPETITOR,
+  TYPE_QUESTION,
+  fetchJson,
+  runApifyScraper,
+  upsertToAirtable,
+} from "./scraperCore.js";
 
 // === MARKET RESEARCH START ===
-const MR_AIRTABLE_BASE_ID = "app1J5xG4dxtt52N9";
-const MR_FORUM_TABLE_ID = "tblQkWESz9jWhbt0i"; // "Forum Leads"
 const MR_AIRTABLE_TOKEN_KEY = "airtable_pat";
 const MR_APIFY_TOKEN_KEY = "apify_token";
-const APIFY_ACTOR = "apify~cheerio-scraper";
 
-const SOURCE_ARIEL = "arielsegal.co.il";
-const SOURCE_PRO = "pro.co.il";
-const TYPE_QUESTION = "שאלה בפורום";
-const TYPE_COMPETITOR = "חשמלאי מתחרה";
 const REVIEW_STATUSES = ["חדש", "רלוונטי", "לא רלוונטי"];
-
-// Keyword buckets used to tag every scraped title with a topic.
-const TOPIC_KEYWORDS = [
-  ["סולארי", ["סולאר", "ממיר", "פאנל", "אינוורטר", "pv", "פוטו"]],
-  ["רכב חשמלי", ["רכב חשמלי", "עמדת טעינה", "טעינה"]],
-  ["הארקה ואיפוס", ["הארק", "איפוס", "אפס", "tn-c", "אלקטרודה"]],
-  ["ממסר פחת", ["פחת", "rcd", "ממסר"]],
-  ["לוח ומפסקים", ["לוח", "מפסק", "מאמ\"ת", "מאמת", "נתיך", "פאזה"]],
-  ["כבלים וחתכים", ["כבל", "חתך", "מוליך", "ממ\"ר", "ממר", "מפל מתח"]],
-  ["מנועים והנעה", ["מנוע", "משנה תדר", "vfd", "מדחס"]],
-  ["תאורה", ["תאורה", "נורה", "led", "גוף תאורה"]],
-  ["בדיקה ורישוי", ["בודק", "בדיקה", "רישיון", "רישוי", "מבחן", "הסמכה"]],
-  ["תקנות", ["תקנה", "תקנות", "חוק"]],
-];
+const SCRAPE_WORKFLOW_URL = "https://github.com/ozt5002-stack/leads-dashboard/actions/workflows/scrape.yml";
 
 // A question with no replies only counts as "stuck" after this many days;
 // newer ones may simply not have been answered yet.
@@ -59,172 +50,6 @@ function isStuck(item) {
   if (item.type !== TYPE_QUESTION || item.replies !== 0) return false;
   const age = questionAgeDays(item);
   return age == null || age >= STUCK_AFTER_DAYS;
-}
-
-function classifyTopic(text) {
-  const lower = (text || "").toLowerCase();
-  for (const [topic, words] of TOPIC_KEYWORDS) {
-    if (words.some((w) => lower.includes(w))) return topic;
-  }
-  return "אחר";
-}
-
-// Runs inside Apify's cheerio-scraper (not in the browser), so it must be self-contained.
-const APIFY_PAGE_FUNCTION = `async function pageFunction(context) {
-  const { $, request, log } = context;
-  const url = request.url;
-  const clean = (s) => (s || "").replace(/\\s+/g, " ").trim();
-  const results = [];
-
-  if (url.includes("arielsegal.co.il")) {
-    $("ul.topic, li.bbp-body > ul").each((i, el) => {
-      const link = $(el).find("a.bbp-topic-permalink").first();
-      if (!link.length) return;
-      results.push({
-        source: "arielsegal.co.il",
-        type: "question",
-        title: clean(link.text()),
-        url: link.attr("href"),
-        author: clean($(el).find(".bbp-topic-started-by .bbp-author-name").first().text()),
-        forum: clean($(el).find(".bbp-topic-started-in a").first().text()),
-        replies: parseInt(clean($(el).find(".bbp-topic-reply-count").first().text()), 10) || 0,
-        date: clean($(el).find(".bbp-topic-freshness a").first().text()),
-      });
-    });
-  } else {
-    // pro.co.il: read structured data (JSON-LD / Next.js payload) and pick objects that look like businesses.
-    const blobs = [];
-    $('script[type="application/ld+json"], script#__NEXT_DATA__').each((i, el) => {
-      try { blobs.push(JSON.parse($(el).contents().text())); } catch (e) {}
-    });
-    const seen = new Set();
-    const walk = (node) => {
-      if (!node || typeof node !== "object") return;
-      if (Array.isArray(node)) return node.forEach(walk);
-      const rating = node.aggregateRating || node.rating || node.ratingValue || node.reviewsCount || node.reviewCount;
-      if (typeof node.name === "string" && rating !== undefined) {
-        const r = node.aggregateRating || {};
-        const link = node.url || node.link || node.slug || "";
-        const key = node.name + "|" + link;
-        if (!seen.has(key)) {
-          seen.add(key);
-          results.push({
-            source: "pro.co.il",
-            type: "competitor",
-            title: clean(node.name),
-            url: link ? new URL(String(link), "https://www.pro.co.il/").href : url + "#" + encodeURIComponent(node.name),
-            rating: parseFloat(r.ratingValue || node.ratingValue || node.rating) || null,
-            replies: parseInt(r.reviewCount || r.ratingCount || node.reviewsCount || node.reviewCount, 10) || 0,
-            details: clean([node.description, node.address && (node.address.addressLocality || node.address), node.areaServed].filter((x) => typeof x === "string").join(" | ")),
-          });
-        }
-      }
-      Object.values(node).forEach(walk);
-    };
-    blobs.forEach(walk);
-  }
-
-  log.info(url + " -> " + results.length + " items");
-  return results;
-}`;
-
-function apifyStartUrls(sources, arielPages) {
-  const urls = [];
-  if (sources.includes(SOURCE_ARIEL)) {
-    for (let page = 1; page <= arielPages; page++) {
-      urls.push({ url: page === 1 ? "https://arielsegal.co.il/topics/" : `https://arielsegal.co.il/topics/page/${page}/` });
-    }
-  }
-  if (sources.includes(SOURCE_PRO)) {
-    urls.push({ url: "https://www.pro.co.il/electricians" });
-  }
-  return urls;
-}
-
-const APIFY_FINAL_STATUSES = ["SUCCEEDED", "FAILED", "TIMED-OUT", "ABORTED"];
-
-// Every API call goes through here so an error always names the service and shows
-// what came back, even when the body isn't JSON (e.g. an HTML error page).
-async function fetchJson(label, url, options) {
-  const res = await fetch(url, options);
-  const text = await res.text();
-  if (!res.ok) throw new Error(`${label} ${res.status}: ${text.slice(0, 200)}`);
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`${label} ${res.status} החזיר תשובה שאינה JSON: ${text.slice(0, 120)}`);
-  }
-}
-
-async function runApifyScraper(token, sources, arielPages, onProgress) {
-  const input = {
-    startUrls: apifyStartUrls(sources, arielPages),
-    pageFunction: APIFY_PAGE_FUNCTION,
-    maxCrawlingDepth: 0,
-    maxConcurrency: 3,
-    proxyConfiguration: { useApifyProxy: true },
-  };
-  const auth = { Authorization: `Bearer ${token}` };
-
-  // Start the run and poll it, instead of holding one HTTP request open for minutes
-  // (fragile on mobile networks).
-  const started = await fetchJson("Apify (הפעלת ריצה)", `https://api.apify.com/v2/acts/${APIFY_ACTOR}/runs`, {
-    method: "POST",
-    headers: { ...auth, "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  let run = started.data;
-  const consoleUrl = `https://console.apify.com/view/runs/${run.id}`;
-  const deadline = Date.now() + 10 * 60 * 1000;
-  while (!APIFY_FINAL_STATUSES.includes(run.status)) {
-    if (Date.now() > deadline) throw new Error(`הריצה ב-Apify לא הסתיימה תוך 10 דקות: ${consoleUrl}`);
-    onProgress(`סורק דרך Apify... סטטוס: ${run.status}`);
-    const polled = await fetchJson("Apify (סטטוס ריצה)", `https://api.apify.com/v2/actor-runs/${run.id}?waitForFinish=30`, { headers: auth });
-    run = polled.data;
-  }
-  if (run.status !== "SUCCEEDED") throw new Error(`הריצה ב-Apify הסתיימה בסטטוס ${run.status}: ${consoleUrl}`);
-
-  const items = await fetchJson(
-    "Apify (תוצאות)",
-    `https://api.apify.com/v2/datasets/${run.defaultDatasetId}/items?clean=true&format=json`,
-    { headers: auth }
-  );
-  return items.filter((item) => item && item.url && item.title);
-}
-
-function toAirtableFields(item, scrapedAt) {
-  const isQuestion = item.type === "question";
-  const fields = {
-    "כותרת": item.title,
-    "מקור": item.source,
-    "סוג": isQuestion ? TYPE_QUESTION : TYPE_COMPETITOR,
-    "קישור": item.url,
-    "נושא": isQuestion ? classifyTopic(item.title) : "",
-    "מחבר": item.author || "",
-    "תגובות": item.replies || 0,
-    "תאריך": item.date || "",
-    "פרטים": item.details || item.forum || "",
-    "נסרק ב": scrapedAt,
-  };
-  if (item.rating != null) fields["דירוג"] = item.rating;
-  return fields;
-}
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Upsert on "קישור" so re-running the scraper updates rows instead of duplicating them,
-// and never touches "סטטוס" so manual review decisions survive a re-scrape.
-async function upsertToAirtable(token, items) {
-  const scrapedAt = new Date().toISOString();
-  for (let i = 0; i < items.length; i += 10) {
-    const batch = items.slice(i, i + 10).map((item) => ({ fields: toAirtableFields(item, scrapedAt) }));
-    await fetchJson("Airtable (שמירה)", `https://api.airtable.com/v0/${MR_AIRTABLE_BASE_ID}/${MR_FORUM_TABLE_ID}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ performUpsert: { fieldsToMergeOn: ["קישור"] }, records: batch, typecast: true }),
-    });
-    await sleep(250); // Airtable allows 5 requests/sec per base
-  }
 }
 
 async function fetchForumLeads(token) {
@@ -394,8 +219,15 @@ function MarketResearch() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-s text-xs">
             <p>Apify: {apifyToken ? "✓ מחובר" : "לא מחובר"} · Airtable: {airtableToken ? "✓ מחובר" : "לא מחובר"}</p>
+            <p className="mt-1">
+              סריקה אוטומטית רצה כל בוקר ב-GitHub Actions ·{" "}
+              <a href={SCRAPE_WORKFLOW_URL} target="_blank" rel="noopener noreferrer" className="btn-edit underline">הפעל עכשיו</a>
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={!airtableToken || busy} onClick={() => reload()} className="btn-ghost rounded-lg border px-4 py-2.5 text-sm font-medium disabled:opacity-50" style={{ borderColor: "var(--border)", minHeight: 44 }}>
+              רענן נתונים
+            </button>
             <button type="button" onClick={handleConnectApify} className="btn-ghost rounded-lg border px-4 py-2.5 text-sm font-medium" style={{ borderColor: "var(--border)", minHeight: 44 }}>
               חבר Apify
             </button>
