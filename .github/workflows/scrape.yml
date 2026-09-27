@@ -1,0 +1,32 @@
+name: Scrape Forum Leads
+
+on:
+  schedule:
+    - cron: "17 4 * * *" # daily, ~07:17 Israel time
+  workflow_dispatch:
+    inputs:
+      ariel_pages:
+        description: "Forum pages to scrape on arielsegal.co.il (1-20)"
+        default: "3"
+      sources:
+        description: "Sources, comma-separated"
+        default: "arielsegal.co.il,pro.co.il"
+
+permissions:
+  contents: read
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/scrape.mjs
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+          ARIEL_PAGES: ${{ inputs.ariel_pages }}
+          SOURCES: ${{ inputs.sources }}
